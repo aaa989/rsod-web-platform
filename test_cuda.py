@@ -8,6 +8,6 @@ if torch.cuda.is_available():
     print(f"显存⼤⼩: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
 print(f"\nUltralytics版本: {ultralytics.__version__}")
 # 测试YOLO11推理
-model = ultralytics.YOLO("yolov11n.pt")
+model = ultralytics.YOLO("yolo11n.pt")
 results = model("https://ultralytics.com/images/bus.jpg")
 print("\nYOLO11推理测试成功！")
