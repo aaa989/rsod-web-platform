@@ -24,11 +24,18 @@ wheels/
 MANIFEST
 
 # 虚拟环境
-.env
 .venv
 env/
 venv/
 ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 环境变量
+.env
+.env.local
 
 # 日志文件
 *.log
@@ -50,6 +57,11 @@ logs/
 data/
 dataset/
 datasets/
+uploads/
+results/
+
+# Docker数据
+storage/
 
 # 运行结果
 runs/
@@ -78,6 +90,7 @@ dist-ssr/
 *.ipr
 *.swp
 .sublime-*
+*.swo
 
 # 系统文件
 Thumbs.db
