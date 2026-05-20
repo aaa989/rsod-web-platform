@@ -1,0 +1,16 @@
+{
+  "timestamp": "20260520_140339",
+  "config": {
+    "epochs": 1,
+    "batch": 16,
+    "imgsz": 640,
+    "device": "cuda",
+    "patience": 20,
+    "lr0": 0.01,
+    "lrf": 0.01,
+    "momentum": 0.937,
+    "weight_decay": 0.0005
+  },
+  "dataset": "D:\\app\\基本组件\\Desktop\\rsod-web-platform\\backend\\data\\rsod\\yolo_dataset\\rsod.yaml",
+  "created_at": "2026-05-20T14:05:21.610597"
+}
