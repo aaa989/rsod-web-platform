@@ -40,9 +40,7 @@
           @click.stop
           ref="fileInputs"
         />
-        <el-icon :size="18" class="tab-icon"
-          ><component :is="tab.icon"
-        /></el-icon>
+        <el-icon :size="18" class="tab-icon"><component :is="tab.icon" /></el-icon>
         <div class="tab-content">
           <span class="tab-text">{{ tab.name }}</span>
           <span class="tab-desc">{{ tab.desc }}</span>
@@ -86,7 +84,7 @@
         <div class="image-compare">
           <div class="image-card">
             <img
-              src="../assets/images/bus.jpg"
+              :src="originalImage"
               alt="原始图片"
               class="compare-image"
             />
@@ -94,12 +92,12 @@
           </div>
           <div class="image-card">
             <img
-              src="../assets/images/predict-bus.png"
+              :src="resultImage"
               alt="检测结果"
               class="compare-image"
             />
             <div class="image-label">检测结果</div>
-            <div class="detection-mark"></div>
+            <div class="detection-mark" v-if="detectionResult"></div>
           </div>
         </div>
       </div>
@@ -124,10 +122,20 @@
             <el-icon><List /></el-icon>
             <span class="card-title">识别清单</span>
           </div>
-          <div class="empty-state">
+          <div v-if="!detectionResult || detectionResult.total_objects === 0" class="empty-state">
             <el-icon class="empty-icon"><CircleCheck /></el-icon>
             <p class="empty-text">未检测到目标</p>
             <p class="empty-desc">影像无异常目标</p>
+          </div>
+          <div v-else class="detection-list">
+            <div
+              v-for="(box, index) in detectionResult.boxes"
+              :key="index"
+              class="detection-item"
+            >
+              <span class="item-name">{{ box.class_name }}</span>
+              <span class="item-confidence">{{ (box.confidence * 100).toFixed(1) }}%</span>
+            </div>
           </div>
         </div>
 
@@ -138,13 +146,17 @@
             <span class="card-title">AI 诊断建议</span>
           </div>
           <div class="diagnosis-content">
-            <p>未检测到指定目标</p>
+            <p v-if="!detectionResult">未检测到指定目标</p>
+            <p v-else>
+              检测到 {{ detectionResult.total_objects }} 个目标，耗时 {{ detectionResult.detection_time }}s。
+              模型: {{ detectionResult.model_name }}
+            </p>
           </div>
         </div>
 
         <!-- 操作按钮 -->
         <div class="action-buttons">
-          <el-button size="default" class="btn-secondary">
+          <el-button size="default" class="btn-secondary" @click="handleRedetect">
             <el-icon><Refresh /></el-icon>
             重新检测
           </el-button>
@@ -159,6 +171,7 @@
 
 <script setup>
 import { ref } from "vue";
+import { ElMessage, ElLoading } from "element-plus";
 import {
   Picture,
   Plus,
@@ -172,10 +185,15 @@ import {
   Refresh,
   Minus,
 } from "@element-plus/icons-vue";
+import { detectSingleImage } from "../api/detection";
 
 const selectedModel = ref("pest-v1");
 const activeTab = ref("single");
 const compareMode = ref("side");
+const originalImage = ref("../assets/images/bus.jpg");
+const resultImage = ref("../assets/images/predict-bus.png");
+const detectionResult = ref(null);
+const isDetecting = ref(false);
 
 const functionTabs = [
   {
@@ -216,345 +234,63 @@ const fileInputs = ref([]);
 
 const handleTabClick = (key) => {
   activeTab.value = key;
-  const input = document.querySelector(
-    `.function-tab[data-key="${key}"] .file-input`,
-  );
+  const input = document.querySelector(`.function-tab[data-key="${key}"] .file-input`);
   if (input) {
     input.click();
   }
 };
 
-const handleFileChange = (event, tabKey) => {
+const handleFileChange = async (event, tabKey) => {
   event.stopPropagation();
   event.preventDefault();
   const files = event.target.files;
   if (files && files.length > 0) {
-    console.log(`上传文件类型: ${tabKey}`);
-    console.log("文件:", files);
-    // 这里可以添加检测逻辑
+    if (tabKey === "single") {
+      await performSingleDetection(files[0]);
+    }
   }
   setTimeout(() => {
-    event.target.value = "";
+    event.target.value = '';
   }, 0);
 };
+
+const performSingleDetection = async (file) => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: "正在检测中...",
+    background: "rgba(0, 0, 0, 0.7)",
+  });
+
+  try {
+    isDetecting.value = true;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("model_name", selectedModel.value);
+
+    originalImage.value = URL.createObjectURL(file);
+
+    const response = await detectSingleImage(formData);
+    if (response.success && response.data) {
+      detectionResult.value = response.data;
+      resultImage.value = response.data.result_image_url;
+      ElMessage.success("检测成功！");
+    } else {
+      ElMessage.error(response.message || "检测失败");
+    }
+  } catch (error) {
+    console.error("检测错误:", error);
+    ElMessage.error("检测失败，请稍后重试");
+  } finally {
+    isDetecting.value = false;
+    loading.close();
+  }
+};
+
+const handleRedetect = () => {
+  const input = document.querySelector(`.function-tab[data-key="single"] .file-input`);
+  if (input) {
+    input.click();
+  }
+};
 </script>
-
-<style scoped>
-.detection-page {
-  width: 100%;
-  position: relative;
-}
-
-.page-header {
-  margin-bottom: 32px;
-  padding-top: 0;
-}
-
-.breadcrumb {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
-}
-
-.separator {
-  margin: 0 6px;
-}
-
-.active {
-  color: var(--text-primary);
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.model-selector {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 10;
-}
-
-/* 功能选项卡 */
-.function-tabs {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.function-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  padding: 16px 20px;
-  background-color: #ffffff;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 2px solid transparent;
-  position: relative;
-  overflow: hidden;
-}
-
-.file-input {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  z-index: 10;
-}
-
-.function-tab:hover {
-  background-color: var(--primary-light);
-}
-
-.function-tab.active {
-  background-color: var(--primary-light);
-  border-color: var(--primary-color);
-}
-
-.tab-icon {
-  font-size: 18px;
-  color: var(--primary-color);
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-
-.tab-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.tab-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.4;
-}
-
-.tab-desc {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-/* 主内容区域 */
-.main-content {
-  display: flex;
-  gap: 24px;
-}
-
-.left-panel {
-  flex: 1;
-  background-color: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.panel-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.result-tag {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 13px;
-}
-
-.toolbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.toolbar .el-button {
-  border-radius: 6px;
-  padding: 6px 14px;
-}
-
-.toolbar .el-button.active {
-  background-color: var(--primary-light);
-  color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-/* 图片对比区域 */
-.image-compare {
-  display: flex;
-  gap: 16px;
-  height: 320px;
-}
-
-.image-card {
-  flex: 1;
-  position: relative;
-  border-radius: 8px;
-  overflow: hidden;
-  background-color: #f9fafb;
-}
-
-.compare-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.image-label {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.5);
-  color: #ffffff;
-  font-size: 13px;
-}
-
-.detection-mark {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: var(--primary-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.detection-mark::after {
-  content: "✓";
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: bold;
-}
-
-/* 右侧面板 */
-.right-panel {
-  width: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.info-card {
-  background-color: #ffffff;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.info-item:last-child {
-  border-bottom: none;
-}
-
-.info-label {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.info-value {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.result-card {
-  background-color: #ffffff;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.card-header .el-icon {
-  font-size: 16px;
-  color: var(--primary-color);
-  margin-right: 8px;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 32px 0;
-}
-
-.empty-icon {
-  font-size: 48px;
-  color: var(--success-color);
-  margin-bottom: 12px;
-}
-
-.empty-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.empty-desc {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.diagnosis-content {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 12px;
-}
-
-.btn-secondary {
-  flex: 1;
-  border-radius: 8px;
-  padding: 10px;
-  font-size: 14px;
-}
-
-.btn-primary {
-  flex: 2;
-  border-radius: 8px;
-  padding: 10px;
-  font-size: 14px;
-}
-</style>
