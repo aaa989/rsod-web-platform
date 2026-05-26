@@ -40,7 +40,9 @@
           @click.stop
           ref="fileInputs"
         />
-        <el-icon :size="18" class="tab-icon"><component :is="tab.icon" /></el-icon>
+        <el-icon :size="18" class="tab-icon"
+          ><component :is="tab.icon"
+        /></el-icon>
         <div class="tab-content">
           <span class="tab-text">{{ tab.name }}</span>
           <span class="tab-desc">{{ tab.desc }}</span>
@@ -83,19 +85,11 @@
         <!-- 图片对比区域 -->
         <div class="image-compare">
           <div class="image-card">
-            <img
-              :src="originalImage"
-              alt="原始图片"
-              class="compare-image"
-            />
+            <img :src="originalImage" alt="原始图片" class="compare-image" />
             <div class="image-label">原始图片</div>
           </div>
           <div class="image-card">
-            <img
-              :src="resultImage"
-              alt="检测结果"
-              class="compare-image"
-            />
+            <img :src="resultImage" alt="检测结果" class="compare-image" />
             <div class="image-label">检测结果</div>
             <div class="detection-mark" v-if="detectionResult"></div>
           </div>
@@ -122,7 +116,10 @@
             <el-icon><List /></el-icon>
             <span class="card-title">识别清单</span>
           </div>
-          <div v-if="!detectionResult || detectionResult.total_objects === 0" class="empty-state">
+          <div
+            v-if="!detectionResult || detectionResult.total_objects === 0"
+            class="empty-state"
+          >
             <el-icon class="empty-icon"><CircleCheck /></el-icon>
             <p class="empty-text">未检测到目标</p>
             <p class="empty-desc">影像无异常目标</p>
@@ -134,7 +131,9 @@
               class="detection-item"
             >
               <span class="item-name">{{ box.class_name }}</span>
-              <span class="item-confidence">{{ (box.confidence * 100).toFixed(1) }}%</span>
+              <span class="item-confidence"
+                >{{ (box.confidence * 100).toFixed(1) }}%</span
+              >
             </div>
           </div>
         </div>
@@ -148,15 +147,20 @@
           <div class="diagnosis-content">
             <p v-if="!detectionResult">未检测到指定目标</p>
             <p v-else>
-              检测到 {{ detectionResult.total_objects }} 个目标，耗时 {{ detectionResult.detection_time }}s。
-              模型: {{ detectionResult.model_name }}
+              检测到 {{ detectionResult.total_objects }} 个目标，耗时
+              {{ detectionResult.detection_time }}s。 模型:
+              {{ detectionResult.model_name }}
             </p>
           </div>
         </div>
 
         <!-- 操作按钮 -->
         <div class="action-buttons">
-          <el-button size="default" class="btn-secondary" @click="handleRedetect">
+          <el-button
+            size="default"
+            class="btn-secondary"
+            @click="handleRedetect"
+          >
             <el-icon><Refresh /></el-icon>
             重新检测
           </el-button>
@@ -171,11 +175,12 @@
 
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import { ElMessage, ElLoading } from "element-plus";
 import {
   Picture,
   Plus,
-  Folder,
+  VideoCamera,
   Monitor,
   Check,
   Grid,
@@ -187,6 +192,7 @@ import {
 } from "@element-plus/icons-vue";
 import { detectSingleImage } from "../api/detection";
 
+const router = useRouter();
 const selectedModel = ref("pest-v1");
 const activeTab = ref("single");
 const compareMode = ref("side");
@@ -213,12 +219,11 @@ const functionTabs = [
     multiple: true,
   },
   {
-    key: "folder",
-    name: "文件夹",
-    desc: "上传整个文件夹",
-    icon: Folder,
-    accept: "image/*",
-    multiple: true,
+    key: "camera",
+    name: "摄像头检测",
+    desc: "实时视频流检测",
+    icon: VideoCamera,
+    isCamera: true,
   },
   {
     key: "video",
@@ -234,7 +239,17 @@ const fileInputs = ref([]);
 
 const handleTabClick = (key) => {
   activeTab.value = key;
-  const input = document.querySelector(`.function-tab[data-key="${key}"] .file-input`);
+
+  // 如果是摄像头检测，跳转到摄像头页面
+  const tab = functionTabs.find((t) => t.key === key);
+  if (tab && tab.isCamera) {
+    router.push("/camera");
+    return;
+  }
+
+  const input = document.querySelector(
+    `.function-tab[data-key="${key}"] .file-input`,
+  );
   if (input) {
     input.click();
   }
@@ -250,7 +265,7 @@ const handleFileChange = async (event, tabKey) => {
     }
   }
   setTimeout(() => {
-    event.target.value = '';
+    event.target.value = "";
   }, 0);
 };
 
@@ -288,9 +303,332 @@ const performSingleDetection = async (file) => {
 };
 
 const handleRedetect = () => {
-  const input = document.querySelector(`.function-tab[data-key="single"] .file-input`);
+  const input = document.querySelector(
+    `.function-tab[data-key="single"] .file-input`,
+  );
   if (input) {
     input.click();
   }
 };
 </script>
+
+<style scoped>
+.detection-page {
+  width: 100%;
+  text-align: left;
+}
+
+.page-header {
+  margin-bottom: 32px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+.separator {
+  color: #ccc;
+}
+
+.active {
+  color: #aa3bff;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 600;
+  color: #08060d;
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #666;
+}
+
+.model-selector {
+  margin-bottom: 24px;
+}
+
+.function-tabs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.function-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 2px dashed #e5e4e7;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fff;
+}
+
+.function-tab:hover {
+  border-color: #aa3bff;
+  background: rgba(170, 59, 255, 0.05);
+}
+
+.function-tab.active {
+  border-color: #aa3bff;
+  background: rgba(170, 59, 255, 0.1);
+}
+
+.file-input {
+  display: none;
+}
+
+.tab-icon {
+  margin-bottom: 12px;
+  color: #aa3bff;
+}
+
+.tab-content {
+  text-align: center;
+}
+
+.tab-text {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  color: #08060d;
+  margin-bottom: 4px;
+}
+
+.tab-desc {
+  font-size: 12px;
+  color: #999;
+}
+
+.main-content {
+  display: flex;
+  gap: 24px;
+}
+
+.left-panel {
+  flex: 2;
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.panel-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #08060d;
+}
+
+.result-tag {
+  font-size: 12px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.toolbar .el-button {
+  border-radius: 6px;
+}
+
+.toolbar .el-button.active {
+  background: #aa3bff;
+  border-color: #aa3bff;
+  color: #fff;
+}
+
+.image-compare {
+  display: flex;
+  gap: 16px;
+}
+
+.image-card {
+  flex: 1;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.compare-image {
+  width: 100%;
+  height: 280px;
+  object-fit: contain;
+}
+
+.image-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  text-align: center;
+}
+
+.detection-mark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 32px;
+  pointer-events: none;
+}
+
+.info-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #08060d;
+}
+
+.result-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #08060d;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 0;
+}
+
+.empty-icon {
+  font-size: 48px;
+  color: #52c41a;
+  margin-bottom: 12px;
+}
+
+.empty-text {
+  font-size: 16px;
+  color: #08060d;
+  margin-bottom: 4px;
+}
+
+.empty-desc {
+  font-size: 12px;
+  color: #999;
+}
+
+.detection-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.detection-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.detection-item:last-child {
+  margin-bottom: 0;
+}
+
+.item-name {
+  font-size: 14px;
+  color: #08060d;
+}
+
+.item-confidence {
+  font-size: 14px;
+  color: #aa3bff;
+  font-weight: 500;
+}
+
+.diagnosis-content {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-secondary {
+  flex: 1;
+  border-radius: 8px;
+}
+
+.btn-primary {
+  flex: 2;
+  border-radius: 8px;
+  background: #aa3bff;
+  border-color: #aa3bff;
+}
+
+.btn-primary:hover {
+  background: #9127e0;
+  border-color: #9127e0;
+}
+</style>

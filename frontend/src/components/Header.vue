@@ -130,6 +130,16 @@ import {
 
 .user-avatar {
     margin-right: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .user-info {
