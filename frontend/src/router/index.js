@@ -26,6 +26,11 @@ const routes = [
     component: () => import("../views/DetectionPage.vue"),
   },
   {
+    path: "/camera",
+    name: "摄像头检测",
+    component: () => import("../views/CameraDetectionView.vue"),
+  },
+  {
     path: "/history",
     name: "历史记录",
     component: () => import("../views/HistoryPage.vue"),

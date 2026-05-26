@@ -36,3 +36,12 @@ export const getTargetList = () => {
     method: "get",
   });
 };
+
+// 新增：摄像头帧检测接口（核心）
+export const detectCameraFrame = (data) => {
+  return request({
+    url: "/detection/camera/detect",
+    method: "post",
+    data, // 这里不需要特殊headers，因为传的是base64字符串（JSON格式）
+  });
+};

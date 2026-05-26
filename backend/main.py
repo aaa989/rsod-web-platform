@@ -4,6 +4,9 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.api.detection import router as detection_router
 from app.api.model import router as model_router
+# ===================== 新增这一行 =====================
+from app.api.camera import router as camera_router
+# ======================================================
 from app.utils.file_utils import ensure_directories
 
 ensure_directories()
@@ -26,6 +29,9 @@ app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
 
 app.include_router(detection_router, prefix="/api")
 app.include_router(model_router, prefix="/api")
+# ===================== 新增这一行 =====================
+app.include_router(camera_router, prefix="/api")
+# ======================================================
 
 @app.get("/")
 async def root():
